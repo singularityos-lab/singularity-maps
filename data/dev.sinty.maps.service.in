@@ -1,0 +1,3 @@
+[D-BUS Service]
+Name=dev.sinty.maps
+Exec=@bindir@/singularity-maps --gapplication-service

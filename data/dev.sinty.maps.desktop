@@ -1,0 +1,16 @@
+[Desktop Entry]
+Name=Maps
+Comment=Find places and plan routes
+Exec=singularity-maps %U
+Icon=dev.sinty.maps
+Terminal=false
+Type=Application
+Categories=Utility;Maps;
+MimeType=x-scheme-handler/geo;
+Keywords=map;maps;directions;route;place;location;navigation;osm;
+StartupWMClass=dev.sinty.maps
+Actions=directions;
+
+[Desktop Action directions]
+Name=Directions
+Exec=singularity-maps --directions

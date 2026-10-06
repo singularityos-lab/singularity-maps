@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/dev/sinty/maps/icons/scalable/actions">
+    <file alias="maps-arrive-symbolic.svg">symbolic/maps-arrive-symbolic.svg</file>
+    <file alias="maps-bike-symbolic.svg">symbolic/maps-bike-symbolic.svg</file>
+    <file alias="maps-car-symbolic.svg">symbolic/maps-car-symbolic.svg</file>
+    <file alias="maps-directions-symbolic.svg">symbolic/maps-directions-symbolic.svg</file>
+    <file alias="maps-layers-symbolic.svg">symbolic/maps-layers-symbolic.svg</file>
+    <file alias="maps-roundabout-symbolic.svg">symbolic/maps-roundabout-symbolic.svg</file>
+    <file alias="maps-start-symbolic.svg">symbolic/maps-start-symbolic.svg</file>
+    <file alias="maps-swap-symbolic.svg">symbolic/maps-swap-symbolic.svg</file>
+    <file alias="maps-turn-left-symbolic.svg">symbolic/maps-turn-left-symbolic.svg</file>
+    <file alias="maps-turn-right-symbolic.svg">symbolic/maps-turn-right-symbolic.svg</file>
+    <file alias="maps-turn-slight-left-symbolic.svg">symbolic/maps-turn-slight-left-symbolic.svg</file>
+    <file alias="maps-turn-slight-right-symbolic.svg">symbolic/maps-turn-slight-right-symbolic.svg</file>
+    <file alias="maps-uturn-symbolic.svg">symbolic/maps-uturn-symbolic.svg</file>
+    <file alias="maps-walk-symbolic.svg">symbolic/maps-walk-symbolic.svg</file>
+  </gresource>
+</gresources>
