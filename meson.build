@@ -31,7 +31,7 @@ resources = gnome.compile_resources(
 )
 
 executable('singularity-maps',
-  files('src/geo.vala', 'src/services.vala', 'src/mapview.vala', 'src/search.vala', 'src/window.vala', 'src/app.vala') + [resources],
+  files('src/geo.vala', 'src/services.vala', 'src/mapview.vala', 'src/search.vala', 'src/window.vala', 'src/travel_bus.vala', 'src/app.vala') + [resources],
   dependencies: [gtk_dep, gee_dep, soup_dep, json_dep, posix_dep, math_dep, libsingularity_dep],
   install: true
 )

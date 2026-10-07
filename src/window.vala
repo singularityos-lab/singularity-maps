@@ -466,6 +466,13 @@ namespace Singularity.Apps.Maps {
             string link = "https://www.openstreetmap.org/?mlat=%s&mlon=%s#map=17/%s/%s".printf (p.lat.format (b1, "%.6f"), p.lon.format (b2, "%.6f"), p.lat.format (new char[32], "%.6f"), p.lon.format (new char[32], "%.6f"));
             share.clicked.connect (() => get_clipboard ().set_text (link));
             actions.append (share);
+            var photos = new Button.from_icon_name ("image-x-generic-symbolic");
+            photos.add_css_class ("maps-round");
+            photos.tooltip_text = _("Photos Taken Here");
+            photos.update_property (AccessibleProperty.LABEL, _("Photos Taken Here"), -1);
+            double plat = p.lat, plon = p.lon;
+            photos.clicked.connect (() => Singularity.ShareTargets.activate_app_action.begin ("dev.sinty.photos", "show-place", new Variant ("(dd)", plat, plon)));
+            actions.append (photos);
             var web = new Button.from_icon_name ("web-browser-symbolic");
             web.add_css_class ("maps-round");
             web.tooltip_text = _("Open in OpenStreetMap");

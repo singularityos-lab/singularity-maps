@@ -320,6 +320,11 @@ namespace Singularity.Apps.Maps {
 
         public async void locate (out double lat, out double lon, out double accuracy) throws Error {
             lat = lon = accuracy = 0;
+            string? fixed_location = Environment.get_variable ("SINGULARITY_LOCATION");
+            if (fixed_location != null && Geo.parse_coords (fixed_location, out lat, out lon)) {
+                accuracy = 10;
+                return;
+            }
             bus = yield Bus.get (BusType.SYSTEM);
             var reply = yield bus.call ("org.freedesktop.GeoClue2", "/org/freedesktop/GeoClue2/Manager",
                 "org.freedesktop.GeoClue2.Manager", "GetClient", null, new VariantType ("(o)"), DBusCallFlags.NONE, 10000);
