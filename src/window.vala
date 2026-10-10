@@ -472,6 +472,7 @@ namespace Singularity.Apps.Maps {
             photos.update_property (AccessibleProperty.LABEL, _("Photos Taken Here"), -1);
             double plat = p.lat, plon = p.lon;
             photos.clicked.connect (() => Singularity.ShareTargets.activate_app_action.begin ("dev.sinty.photos", "show-place", new Variant ("(dd)", plat, plon)));
+            photos.visible = Singularity.Capabilities.has_app ("dev.sinty.photos");
             actions.append (photos);
             var web = new Button.from_icon_name ("web-browser-symbolic");
             web.add_css_class ("maps-round");
