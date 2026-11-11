@@ -92,6 +92,7 @@ namespace Singularity.Apps.Maps {
             go.append (_("Favorite Places"), "win.favorites");
             menu.append_submenu (_("Go"), go);
             set_menubar (menu);
+            MapsIntents.install (this);
             var quit = new SimpleAction ("quit", null);
             quit.activate.connect (() => {
                 foreach (var w in get_windows ().copy ()) w.close ();
@@ -142,6 +143,10 @@ namespace Singularity.Apps.Maps {
             if (w == null) w = new MapsWindow (this);
             w.present ();
             return w;
+        }
+
+        internal MapsWindow agent_window () {
+            return main_window ();
         }
 
         public void show_place (Place p) {

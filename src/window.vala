@@ -747,6 +747,42 @@ namespace Singularity.Apps.Maps {
             });
         }
 
+        internal MapView agent_map () {
+            return map;
+        }
+
+        internal Route? agent_route () {
+            return route;
+        }
+
+        internal Place? agent_origin () {
+            return origin;
+        }
+
+        internal Place? agent_destination () {
+            return destination;
+        }
+
+        internal Mode agent_mode () {
+            return mode;
+        }
+
+        internal void agent_directions (Place from, Place to, Mode m) {
+            origin = from;
+            destination = to;
+            mode = m;
+            build_route_panel ();
+            compute_route ();
+        }
+
+        internal void agent_layer (TileSource src) {
+            set_layer (src);
+        }
+
+        internal void agent_view (double lat, double lon, double z) {
+            map.fly_to (lat, lon, z);
+        }
+
         public void open_geo (string uri) {
             string rest = uri.substring (4);
             string q = "";

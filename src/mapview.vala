@@ -372,6 +372,10 @@ namespace Singularity.Apps.Maps {
             });
         }
 
+        public bool flying {
+            get { return zoom_anim != 0; }
+        }
+
         public double left_inset;
 
         public void fit (double south, double west, double north, double east) {
