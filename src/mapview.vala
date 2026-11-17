@@ -169,6 +169,7 @@ namespace Singularity.Apps.Maps {
         public MapView (TileSource source) {
             add_css_class ("maps-view");
             focusable = true;
+            overflow = Overflow.HIDDEN;
             tiles = new TileCache (source);
             tiles.tile_ready.connect (() => queue_draw ());
             set_center (41.9, 12.5, 5);
