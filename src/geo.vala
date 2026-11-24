@@ -138,6 +138,38 @@ namespace Singularity.Apps.Maps {
             return b.get_root ();
         }
 
+        public const string TYPE = "(sssddsxad)";
+
+        public Variant to_variant () {
+            var bounds = new VariantBuilder (new VariantType ("ad"));
+            if (extent != null) foreach (double d in extent) bounds.add ("d", d);
+            return new Variant.tuple ({
+                new Variant.string (name),
+                new Variant.string (detail),
+                new Variant.string (category),
+                new Variant.double (lat),
+                new Variant.double (lon),
+                new Variant.string (osm_type),
+                new Variant.int64 (osm_id),
+                bounds.end ()
+            });
+        }
+
+        public static Place from_variant (Variant v) {
+            var p = new Place (v.get_child_value (0).get_string (), v.get_child_value (1).get_string (),
+                v.get_child_value (3).get_double (), v.get_child_value (4).get_double ());
+            p.category = v.get_child_value (2).get_string ();
+            p.osm_type = v.get_child_value (5).get_string ();
+            p.osm_id = v.get_child_value (6).get_int64 ();
+            var bounds = v.get_child_value (7);
+            if (bounds.n_children () > 0) {
+                double[] e = {};
+                for (size_t i = 0; i < bounds.n_children (); i++) e += bounds.get_child_value (i).get_double ();
+                p.extent = e;
+            }
+            return p;
+        }
+
         public static Place from_json (Json.Object o) {
             var p = new Place (o.get_string_member_with_default ("name", ""), o.get_string_member_with_default ("detail", ""),
                 o.get_double_member_with_default ("lat", 0), o.get_double_member_with_default ("lon", 0));

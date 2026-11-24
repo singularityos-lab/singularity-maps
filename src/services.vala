@@ -164,6 +164,38 @@ namespace Singularity.Apps.Maps {
         public double north = -90;
         public double west = 180;
         public double east = -180;
+
+        public const string TYPE = "(ddada(sds)dddd)";
+
+        public Variant to_variant () {
+            var path = new VariantBuilder (new VariantType ("ad"));
+            foreach (double d in points) path.add ("d", d);
+            var list = new VariantBuilder (new VariantType ("a(sds)"));
+            foreach (var s in steps) list.add ("(sds)", s.text, s.distance, s.icon);
+            return new Variant ("(dd@ad@a(sds)dddd)", distance, duration, path.end (), list.end (), south, north, west, east);
+        }
+
+        public static Route from_variant (Variant v) {
+            var r = new Route ();
+            r.distance = v.get_child_value (0).get_double ();
+            r.duration = v.get_child_value (1).get_double ();
+            r.points = (double[]) v.get_child_value (2);
+            var it = v.get_child_value (3).iterator ();
+            string text, icon;
+            double distance;
+            while (it.next ("(sds)", out text, out distance, out icon)) {
+                var step = new Step ();
+                step.text = text;
+                step.distance = distance;
+                step.icon = icon;
+                r.steps.add (step);
+            }
+            r.south = v.get_child_value (4).get_double ();
+            r.north = v.get_child_value (5).get_double ();
+            r.west = v.get_child_value (6).get_double ();
+            r.east = v.get_child_value (7).get_double ();
+            return r;
+        }
     }
 
     public class Router {

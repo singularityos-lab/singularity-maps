@@ -24,6 +24,10 @@ namespace Singularity.Apps.Maps {
         private double located_lon = double.NAN;
         private KeyFile state = new KeyFile ();
         private string state_path;
+        private string panel_kind = "";
+        private string panel_query = "";
+        private string panel_message = "";
+        private Gee.List<Place> results = new Gee.ArrayList<Place> ();
 
         public MapsWindow (MapsApp app) {
             Object (application: app);
@@ -310,6 +314,8 @@ namespace Singularity.Apps.Maps {
                 spin.spinning = true;
                 panel.append (spin);
                 show_panel ();
+                panel_kind = "searching";
+                panel_query = q;
             }
             double lat, lon;
             map.center (out lat, out lon);
@@ -319,15 +325,24 @@ namespace Singularity.Apps.Maps {
                     var list = Search.query.end (res);
                     show_results (list);
                 } catch (Error e) {
-                    clear_panel ();
-                    panel.append (panel_header (_("Results")));
-                    panel.append (panel_status ("network-error", _("Search Not Available"), e.message, _("Try Again"), () => run_search (q)));
-                    show_panel ();
+                    search_failed (q, e.message);
                 }
             });
         }
 
-        private void show_results (Gee.List<Place> list) {
+        private void search_failed (string q, string message) {
+            clear_panel ();
+            panel.append (panel_header (_("Results")));
+            panel.append (panel_status ("network-error", _("Search Not Available"), message, _("Try Again"), () => run_search (q)));
+            show_panel ();
+            panel_kind = "search-failed";
+            panel_query = q;
+            panel_message = message;
+        }
+
+        private void show_results (Gee.List<Place> list, bool fly = true) {
+            panel_kind = "results";
+            results = list;
             clear_panel ();
             panel.append (panel_header (_("Results")));
             map.markers.clear ();
@@ -375,6 +390,10 @@ namespace Singularity.Apps.Maps {
             box.row_activated.connect ((row) => show_place (row.get_data<Place> ("place"), true));
             panel.append (box);
             show_panel ();
+            if (!fly) {
+                map.queue_draw ();
+                return;
+            }
             double s = 90, n = -90, w = 180, e = -180;
             foreach (var p in list) {
                 s = double.min (s, p.lat);
@@ -420,6 +439,7 @@ namespace Singularity.Apps.Maps {
             update_place_actions ();
             map.queue_draw ();
             if (fly) focus_place (p);
+            panel_kind = "place";
             clear_panel ();
             panel.append (panel_header (p.name));
             if (p.category != "" || p.detail != "") {
@@ -499,12 +519,17 @@ namespace Singularity.Apps.Maps {
                     double z = acc < 100 ? 16 : (acc < 1000 ? 14 : (acc < 10000 ? 12 : 9));
                     map.fly_to (lat, lon, z);
                 } catch (Error e) {
-                    clear_panel ();
-                    panel.append (panel_header (_("Location")));
-                    panel.append (panel_status ("find-location", _("Location Not Available"), _("Turn on Location Services in Settings, or search for a place."), _("Try Again"), () => locate ()));
-                    show_panel ();
+                    location_failed ();
                 }
             });
+        }
+
+        private void location_failed () {
+            clear_panel ();
+            panel.append (panel_header (_("Location")));
+            panel.append (panel_status ("find-location", _("Location Not Available"), _("Turn on Location Services in Settings, or search for a place."), _("Try Again"), () => locate ()));
+            show_panel ();
+            panel_kind = "location";
         }
 
         private void show_layers () {
@@ -531,6 +556,7 @@ namespace Singularity.Apps.Maps {
         }
 
         private void show_favorites () {
+            panel_kind = "favorites";
             clear_panel ();
             if (favorites.places.size == 0) {
                 panel.append (panel_header (""));
@@ -633,6 +659,7 @@ namespace Singularity.Apps.Maps {
         private Box? route_results;
 
         private void build_route_panel () {
+            panel_kind = "route";
             clear_panel ();
             panel.append (panel_header (_("Directions")));
             var modes = new Box (Orientation.HORIZONTAL, 4);
@@ -699,52 +726,58 @@ namespace Singularity.Apps.Maps {
             var from = origin, to = destination;
             Router.find.begin (from, to, mode, (o, res) => {
                 if (from != origin || to != destination) return;
-                while ((c = route_results.get_first_child ()) != null) route_results.remove (c);
                 try {
-                    route = Router.find.end (res);
-                    map.route = route.points;
-                    map.pin = to;
-                    update_place_actions ();
-                    map.markers.clear ();
-                    map.fit (route.south, route.west, route.north, route.east);
-                    var summary = new Label ("%s · %s".printf (Geo.format_duration (route.duration), Geo.format_distance (route.distance)));
-                    summary.add_css_class ("maps-route-summary");
-                    summary.xalign = 0;
-                    route_results.append (summary);
-                    var list = new ListBox ();
-                    list.add_css_class ("maps-steps");
-                    list.selection_mode = SelectionMode.NONE;
-                    foreach (var st in route.steps) {
-                        var row = new Box (Orientation.HORIZONTAL, 10);
-                        row.margin_top = row.margin_bottom = 6;
-                        var ic = new Image.from_icon_name (st.icon);
-                        ic.valign = Align.START;
-                        row.append (ic);
-                        var t = new Label (st.text);
-                        t.wrap = true;
-                        t.xalign = 0;
-                        t.hexpand = true;
-                        row.append (t);
-                        if (st.distance > 0) {
-                            var d = new Label (Geo.format_distance (st.distance));
-                            d.add_css_class ("dim-label");
-                            d.add_css_class ("caption");
-                            d.valign = Align.START;
-                            row.append (d);
-                        }
-                        list.append (row);
-                    }
-                    route_results.append (list);
-                    var credit = new Label (_("Routes by OSRM with OpenStreetMap data"));
-                    credit.add_css_class ("dim-label");
-                    credit.add_css_class ("caption");
-                    route_results.append (credit);
+                    show_route (Router.find.end (res), to, true);
                 } catch (Error e) {
+                    while ((c = route_results.get_first_child ()) != null) route_results.remove (c);
                     map.route = null;
                     route_results.append (status (e.message));
                 }
                 map.queue_draw ();
             });
+        }
+
+        private void show_route (Route found, Place to, bool fly) {
+            Widget? c;
+            while ((c = route_results.get_first_child ()) != null) route_results.remove (c);
+            route = found;
+            map.route = route.points;
+            map.pin = to;
+            update_place_actions ();
+            map.markers.clear ();
+            if (fly) map.fit (route.south, route.west, route.north, route.east);
+            var summary = new Label ("%s · %s".printf (Geo.format_duration (route.duration), Geo.format_distance (route.distance)));
+            summary.add_css_class ("maps-route-summary");
+            summary.xalign = 0;
+            route_results.append (summary);
+            var list = new ListBox ();
+            list.add_css_class ("maps-steps");
+            list.selection_mode = SelectionMode.NONE;
+            foreach (var st in route.steps) {
+                var row = new Box (Orientation.HORIZONTAL, 10);
+                row.margin_top = row.margin_bottom = 6;
+                var ic = new Image.from_icon_name (st.icon);
+                ic.valign = Align.START;
+                row.append (ic);
+                var t = new Label (st.text);
+                t.wrap = true;
+                t.xalign = 0;
+                t.hexpand = true;
+                row.append (t);
+                if (st.distance > 0) {
+                    var d = new Label (Geo.format_distance (st.distance));
+                    d.add_css_class ("dim-label");
+                    d.add_css_class ("caption");
+                    d.valign = Align.START;
+                    row.append (d);
+                }
+                list.append (row);
+            }
+            route_results.append (list);
+            var credit = new Label (_("Routes by OSRM with OpenStreetMap data"));
+            credit.add_css_class ("dim-label");
+            credit.add_css_class ("caption");
+            route_results.append (credit);
         }
 
         internal MapView agent_map () {
@@ -781,6 +814,115 @@ namespace Singularity.Apps.Maps {
 
         internal void agent_view (double lat, double lon, double z) {
             map.fly_to (lat, lon, z);
+        }
+
+        public Variant save_migration () {
+            var d = new VariantDict ();
+            d.insert_value ("layer", new Variant.string (map.tiles.source.id));
+            d.insert_value ("view", new Variant ("(ddd)", map.center_x, map.center_y, map.zoom));
+            d.insert_value ("located", new Variant ("(ddd)", located_lat, located_lon, map.location_accuracy));
+            d.insert_value ("panel", new Variant ("(sss)", panel_kind, panel_query, panel_message));
+            d.insert_value ("results", places_variant (results));
+            d.insert_value ("markers", places_variant (map.markers));
+            d.insert_value ("mode", new Variant.int32 ((int) mode));
+            if (map.pin != null) d.insert_value ("pin", map.pin.to_variant ());
+            if (origin != null) d.insert_value ("origin", origin.to_variant ());
+            if (destination != null) d.insert_value ("destination", destination.to_variant ());
+            if (route != null) d.insert_value ("route", route.to_variant ());
+            if (map.route != null) d.insert_value ("path", new Variant.array (VariantType.DOUBLE, doubles (map.route)));
+            return d.end ();
+        }
+
+        private static Variant[] doubles (double[] values) {
+            Variant[] out_v = {};
+            foreach (double v in values) out_v += new Variant.double (v);
+            return out_v;
+        }
+
+        private static Variant places_variant (Gee.List<Place> places) {
+            var b = new VariantBuilder (new VariantType ("a" + Place.TYPE));
+            foreach (var p in places) b.add_value (p.to_variant ());
+            return b.end ();
+        }
+
+        private static Gee.List<Place> places_of (VariantDict d, string key) {
+            var list = new Gee.ArrayList<Place> ();
+            var v = d.lookup_value (key, new VariantType ("a" + Place.TYPE));
+            if (v == null) return list;
+            for (size_t i = 0; i < v.n_children (); i++) list.add (Place.from_variant (v.get_child_value (i)));
+            return list;
+        }
+
+        private static Place? place_of (VariantDict d, string key) {
+            var v = d.lookup_value (key, new VariantType (Place.TYPE));
+            return v != null ? Place.from_variant (v) : null;
+        }
+
+        public void restore_migration (Variant data) {
+            var d = new VariantDict (data);
+            var layer = d.lookup_value ("layer", VariantType.STRING);
+            foreach (var s in TileSource.all ()) {
+                if (layer != null && s.id == layer.get_string () && s.id != map.tiles.source.id) set_layer (s);
+            }
+            var located = d.lookup_value ("located", new VariantType ("(ddd)"));
+            if (located != null) {
+                double accuracy;
+                located.get ("(ddd)", out located_lat, out located_lon, out accuracy);
+                map.location_lat = located_lat;
+                map.location_lon = located_lon;
+                map.location_accuracy = accuracy;
+            }
+            var m = d.lookup_value ("mode", VariantType.INT32);
+            if (m != null) mode = (Mode) m.get_int32 ();
+            origin = place_of (d, "origin");
+            destination = place_of (d, "destination");
+            var found = d.lookup_value ("route", new VariantType (Route.TYPE));
+            route = found != null ? Route.from_variant (found) : null;
+            results = places_of (d, "results");
+            string kind = "";
+            var p = d.lookup_value ("panel", new VariantType ("(sss)"));
+            if (p != null) p.get ("(sss)", out kind, out panel_query, out panel_message);
+            var pin = place_of (d, "pin");
+            switch (kind) {
+                case "results":
+                    show_results (results, false);
+                    break;
+                case "place":
+                    if (pin != null) show_place (pin, false);
+                    break;
+                case "favorites":
+                    show_favorites ();
+                    break;
+                case "route":
+                    build_route_panel ();
+                    if (route != null && destination != null) show_route (route, destination, false);
+                    else compute_route ();
+                    break;
+                case "location":
+                    location_failed ();
+                    break;
+                case "search-failed":
+                    search_failed (panel_query, panel_message);
+                    break;
+                case "searching":
+                    run_search (panel_query);
+                    break;
+            }
+            map.pin = pin;
+            map.markers.clear ();
+            map.markers.add_all (places_of (d, "markers"));
+            var path = d.lookup_value ("path", new VariantType ("ad"));
+            map.route = path != null ? (double[]) path : null;
+            update_place_actions ();
+            var view = d.lookup_value ("view", new VariantType ("(ddd)"));
+            if (view != null) {
+                double cx, cy, z;
+                view.get ("(ddd)", out cx, out cy, out z);
+                map.set_center (0, 0, z);
+                map.center_x = cx;
+                map.center_y = cy;
+            }
+            map.queue_draw ();
         }
 
         public void open_geo (string uri) {

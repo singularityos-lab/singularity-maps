@@ -2,7 +2,7 @@ using Gtk;
 
 namespace Singularity.Apps.Maps {
 
-    public class MapsApp : Singularity.Application {
+    public class MapsApp : Singularity.Application, Singularity.Migration.Migratable {
         public Favorites favorites;
         private Singularity.DockMenu dock_menu;
         private string? pending_action;
@@ -165,6 +165,31 @@ namespace Singularity.Apps.Maps {
                 return;
             }
             main_window ();
+        }
+
+        public Variant save_model () {
+            return new VariantDict ().end ();
+        }
+
+        public async void restore_model (Variant model) throws Error {
+        }
+
+        public string window_kind (Gtk.Window w) {
+            return (w is MapsWindow) ? "maps" : "";
+        }
+
+        public Variant save_window (Gtk.Window w) {
+            return ((MapsWindow) w).save_migration ();
+        }
+
+        public async Gtk.Window? rebuild_window (string kind, Variant data) throws Error {
+            if (kind != "maps") return null;
+            foreach (var old in get_windows ().copy ()) {
+                if (old is MapsWindow) old.destroy ();
+            }
+            var w = new MapsWindow (this);
+            w.restore_migration (data);
+            return w;
         }
 
         public override void open (File[] files, string hint) {
