@@ -120,7 +120,7 @@ namespace Singularity.Apps.Maps {
         public override void launch_search (string[] terms, uint32 timestamp) {
             string? text = query_text (terms);
             if (text != null) app.search_for (text);
-            else app.activate ();
+            else app.show_window ();
         }
     }
 }

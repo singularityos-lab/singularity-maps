@@ -2,7 +2,7 @@ using Gtk;
 
 namespace Singularity.Apps.Maps {
 
-    public class MapsApp : Singularity.Application, Singularity.Migration.Migratable {
+    public class MapsApp : Singularity.Application, Singularity.Migration.Migratable, Singularity.Startup.Bootable {
         public Favorites favorites;
         private Singularity.DockMenu dock_menu;
         private string? pending_action;
@@ -157,7 +157,42 @@ namespace Singularity.Apps.Maps {
             main_window ().open_geo ("geo:0,0?q=" + Uri.escape_string (text, null, false));
         }
 
-        public override void activate () {
+        public Singularity.Startup.Plan build_plan (Singularity.Startup.Request request) {
+            var plan = new Singularity.Startup.Plan ();
+            plan.version = "maps-1";
+            if (request.kind == Singularity.Startup.RequestKind.SERVICE) {
+                plan.main ("ready", Singularity.Startup.Category.PREPARE, (c) => {})
+                    .reaches (Singularity.Startup.Milestone.SHELL_READY)
+                    .reaches (Singularity.Startup.Milestone.CONTENT_READY)
+                    .reaches (Singularity.Startup.Milestone.INTERACTIVE);
+                return plan;
+            }
+            if (request.kind == Singularity.Startup.RequestKind.OPEN) {
+                var files = request.files ();
+                plan.main ("window", Singularity.Startup.Category.SHELL, (c) => {
+                    c.window = main_window ();
+                }).reaches (Singularity.Startup.Milestone.SHELL_READY);
+                plan.main ("open-file", Singularity.Startup.Category.CONTENT, (c) => open_files (files))
+                    .depends_on ("window")
+                    .reaches (Singularity.Startup.Milestone.CONTENT_READY)
+                    .reaches (Singularity.Startup.Milestone.INTERACTIVE);
+                return plan;
+            }
+            plan.main ("window", Singularity.Startup.Category.SHELL, (c) => {
+                show_window ();
+                c.window = get_active_window ();
+            }).reaches (Singularity.Startup.Milestone.SHELL_READY)
+              .reaches (Singularity.Startup.Milestone.CONTENT_READY)
+              .reaches (Singularity.Startup.Milestone.INTERACTIVE);
+            return plan;
+        }
+
+        public void handle_request (Singularity.Startup.Request request) {
+            if (request.kind == Singularity.Startup.RequestKind.OPEN) open_files (request.files ());
+            else show_window ();
+        }
+
+        internal void show_window () {
             if (pending_action != null) {
                 string action = pending_action;
                 pending_action = null;
@@ -192,7 +227,7 @@ namespace Singularity.Apps.Maps {
             return w;
         }
 
-        public override void open (File[] files, string hint) {
+        private void open_files (File[] files) {
             var w = main_window ();
             foreach (var f in files) {
                 string uri = f.get_uri ();
